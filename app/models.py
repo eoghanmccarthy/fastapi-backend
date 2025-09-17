@@ -1,5 +1,6 @@
 # Import the column types we need to define our database table structure
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy.orm import relationship
 
 # Import func to use database functions like getting the current timestamp
 from sqlalchemy.sql import func
@@ -7,7 +8,6 @@ from sqlalchemy.sql import func
 # Import the Base class we created in database.py
 # All our database models (tables) will inherit from this Base
 from .database import Base
-
 
 # Define our User table as a Python class
 # This class represents a table in our database
@@ -42,12 +42,35 @@ class User(Base):
     # func.now() tells the database to use its built-in "get current time" function
     created_at = Column(DateTime, server_default=func.now())
 
-# When this model is used, it will create a table that looks like:
-#
-# users table:
-# ┌────┬────────────┬──────────────────┬───────────┬─────────────────────┐
-# │ id │    name    │      email       │ is_active │     created_at      │
-# ├────┼────────────┼──────────────────┼───────────┼─────────────────────┤
-# │ 1  │ "John Doe" │ "john@email.com" │    True   │ 2024-01-15 10:30:00 │
-# │ 2  │ "Jane Doe" │ "jane@email.com" │    True   │ 2024-01-15 11:45:00 │
-# └────┴────────────┴──────────────────┴───────────┴─────────────────────┘
+# Define our Post table - shows relationship with User
+class Post(Base):
+    # Tell SQLAlchemy what the actual table name should be in the database
+    __tablename__ = "posts"
+
+    # Primary key for posts
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Post title
+    title = Column(String, index=True)
+
+    # Post content - Text allows longer content than String
+    content = Column(Text)
+
+    # Foreign key - this links each post to a user
+    # ForeignKey("users.id") means this column references the id column in users table
+    # When you create a post, you must specify which user owns it
+    owner_id = Column(Integer, ForeignKey("users.id"))
+
+    # Timestamp when post was created
+    created_at = Column(DateTime, server_default=func.now())
+
+    # Define relationship to user
+    # This creates a "virtual" field that lets you access post.owner
+    # back_populates="posts" connects to the posts field in User model
+    owner = relationship("User", back_populates="posts")
+
+
+# The relationships create these connections:
+# - user.posts → gives you all posts by that user
+# - post.owner → gives you the user who created that post
+# - This is a "one-to-many" relationship (one user, many posts)

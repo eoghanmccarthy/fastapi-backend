@@ -21,8 +21,7 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./app.db"
 # check_same_thread": False = This is SQLite-specific. Normally SQLite only allows
 # one thread to access it, but FastAPI uses multiple threads, so we disable this restriction
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 
 # Create a "session factory" - a template for creating database conversations
@@ -34,6 +33,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Create a base class that all your database models (tables) will inherit from
 # When you create a User or Item class later, they'll extend this Base
 Base = declarative_base()
+
 
 # This is a "dependency" function for FastAPI
 def get_db():
