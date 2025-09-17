@@ -9,6 +9,7 @@ from sqlalchemy.sql import func
 # All our database models (tables) will inherit from this Base
 from .database import Base
 
+
 # Define our User table as a Python class
 # This class represents a table in our database
 class User(Base):
@@ -41,6 +42,12 @@ class User(Base):
     # server_default=func.now() = automatically set to current time when row is created
     # func.now() tells the database to use its built-in "get current time" function
     created_at = Column(DateTime, server_default=func.now())
+
+    # ADD THIS LINE - Define relationship to posts
+    # This creates a "virtual" field that lets you access user.posts
+    # back_populates="owner" connects to the owner field in Post model
+    posts = relationship("Post", back_populates="owner")
+
 
 # Define our Post table - shows relationship with User
 class Post(Base):

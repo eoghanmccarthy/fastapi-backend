@@ -1,10 +1,16 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from . import models
+from typing import List
+from . import models, schemas
 from .database import engine, get_db
 
+
 # Create database tables when the app starts
+# Remove this line for production:
 models.Base.metadata.create_all(bind=engine)
+
+# Instead, run migrations during deployment:
+# alembic upgrade head
 
 app = FastAPI(title="FastAPI Backend", version="1.0.0")
 
@@ -12,6 +18,11 @@ app = FastAPI(title="FastAPI Backend", version="1.0.0")
 @app.get("/")
 def read_root():
     return {"message": "FastAPI Backend is running!"}
+
+
+# ============================================================================
+# USER CRUD OPERATIONS
+# ============================================================================
 
 
 @app.post("/users/")
@@ -53,3 +64,69 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+# ============================================================================
+# POST CRUD OPERATIONS
+# ============================================================================
+
+
+@app.post("/users/{user_id}/posts/", response_model=schemas.Post)
+def create_post(user_id: int, post: schemas.PostCreate, db: Session = Depends(get_db)):
+    # Step 1: Validate that the user exists before creating a post
+    # Query the users table to find a user with the given user_id
+    # .first() returns the user object if found, or None if not found
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Step 2: Create a Python object of class Post
+    # **post.model_dump() unpacks the PostCreate schema into keyword arguments
+    # This gives us title="..." and content="..." from the request body
+    # owner_id=user_id links this post to the user from the URL parameter
+    # SQLAlchemy knows this will go to the 'posts' table because
+    # the Post class has __tablename__ = "posts"
+    db_post = models.Post(**post.model_dump(), owner_id=user_id)
+
+    # Step 3: Add the post object to the database session
+    # This stages the object for insertion but doesn't save it yet
+    # SQLAlchemy looks at the object type (Post) and knows to use the 'posts' table
+    db.add(db_post)
+
+    # Step 4: Actually save the changes to the database
+    # This executes the INSERT SQL statement
+    # The foreign key relationship (owner_id) gets properly linked
+    db.commit()
+
+    # Step 5: Refresh the object to get the database-generated values
+    # This updates our 'db_post' object with the ID and created_at timestamp
+    # that the database automatically generated
+    db.refresh(db_post)
+
+    # Step 6: Return the complete post object (now with ID and timestamps)
+    # FastAPI will automatically convert this to JSON using the response_model
+    return db_post
+
+
+@app.get("/posts/", response_model=List[schemas.Post])
+def read_posts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    posts = db.query(models.Post).offset(skip).limit(limit).all()
+    return posts
+
+
+@app.get("/users/{user_id}/posts/", response_model=List[schemas.Post])
+def read_user_posts(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    posts = db.query(models.Post).filter(models.Post.owner_id == user_id).all()
+    return posts
+
+
+@app.get("/posts/{post_id}", response_model=schemas.Post)
+def read_post(post_id: int, db: Session = Depends(get_db)):
+    post = db.query(models.Post).filter(models.Post.id == post_id).first()
+    if post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return post
