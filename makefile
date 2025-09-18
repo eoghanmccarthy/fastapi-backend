@@ -7,7 +7,7 @@ ACTIVATE = source $(VENV)/bin/activate
 .DEFAULT_GOAL := dev
 
 # Create virtual environment if missing (run once)
-$(VENV):
+venv:
 	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
 
 # Install dependencies (ensures venv exists)
@@ -16,11 +16,11 @@ install: $(VENV)
 
 # Start development server (your main daily command)
 dev: $(VENV)
-	$(ACTIVATE) && uvicorn app.main:app --reload
+	$(ACTIVATE) && uvicorn app.main:app --reload --reload-exclude=".venv/*"
 
 # Run on different port if needed
 dev-port: $(VENV)
-	$(ACTIVATE) && uvicorn app.main:app --reload --port 8080
+	$(ACTIVATE) && uvicorn app.main:app --reload --reload-exclude=".venv/*" --port 8080
 
 # Open an interactive shell with the venv activated (child shell only)
 shell: $(VENV)
@@ -36,4 +36,4 @@ help:
 	@echo "  make shell      Open subshell with venv activated"
 	@echo "  make help       Show this help"
 
-.PHONY: install dev dev-port shell help
+.PHONY: venv install dev dev-port shell help
