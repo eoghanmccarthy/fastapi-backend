@@ -1,3 +1,26 @@
+# MODELS MODULE NOTE
+# This module (app/models.py) defines the SQLAlchemy ORM models that map your
+# Python classes to database tables. Each class below represents a table, and
+# each class attribute of type Column(...) represents a table column.
+#
+# Key ideas:
+# - Base inheritance: All models inherit from Base (declared in app/database.py).
+#   SQLAlchemy uses this to collect table metadata (names, columns, constraints)
+#   so it can create tables (e.g., via Base.metadata.create_all) or generate
+#   migrations when using Alembic.
+# - Not Pydantic: These are database models (ORM) — different from the Pydantic
+#   schemas in app/schemas.py which shape request/response payloads. Routes use
+#   Pydantic for validation/serialization and use these ORM models for database IO.
+# - Relationships: The User ↔ Post relationship is modeled with ForeignKey and
+#   relationship(..., back_populates=...), allowing convenient navigation like
+#   user.posts and post.owner while keeping referential integrity in the DB.
+# - Migrations: In development you can rely on Base.metadata.create_all(...) to
+#   bootstrap tables, but in production prefer Alembic migrations to apply
+#   versioned, auditable schema changes safely (see notes in app/main.py).
+# - Extending the data model: To add new tables/columns, define a new class or
+#   column here, then create and apply a migration (alembic revision --autogenerate
+#   && alembic upgrade head) so the physical database schema matches these models.
+
 # Import the column types we need to define our database table structure
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey
 from sqlalchemy.orm import relationship
@@ -49,7 +72,8 @@ class User(Base):
     posts = relationship("Post", back_populates="owner")
 
 
-# Define our Post table - shows relationship with User
+# Define our Post table as a Python class
+# This class represents a table in our database - shows relationship with User
 class Post(Base):
     # Tell SQLAlchemy what the actual table name should be in the database
     __tablename__ = "posts"
